@@ -119,6 +119,14 @@ ashita.events.register('command', 'command_cb', function (e)
         end
     end
 
+    if (#args == 2 and args[2]:any('ichi')) then
+        useNi = false;
+    end
+
+    if (#args == 2 and args[2]:any('ni')) then
+        useNi = true;
+    end
+
 end);
 
 --------------------------------------------------------------------
@@ -158,11 +166,16 @@ ashita.events.register('d3d_present', 'present_cb', function ()
                 imgui.TextColored(spell.color, "Ichi");
             end
 
-            local recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
             local toolsRemaining = tostring(NinjutsuCost(spell.itemId));
             imgui.SameLine();
             imgui.SetCursorPosX(imgui.GetCursorPosX() + 30 - imgui.CalcTextSize(spell.spellName));
             imgui.Text(" (" .. toolsRemaining .. ")");
+
+            if (useNi == true) then
+                local recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
+            else
+                local recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId-1) / 60));
+            end
             imgui.SameLine();
             imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.GetStyle().FramePadding.x - imgui.CalcTextSize(recastTime));
             imgui.Text(recastTime);
