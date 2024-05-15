@@ -171,10 +171,11 @@ ashita.events.register('d3d_present', 'present_cb', function ()
             imgui.SetCursorPosX(imgui.GetCursorPosX() + 30 - imgui.CalcTextSize(spell.spellName));
             imgui.Text(" (" .. toolsRemaining .. ")");
 
+            local recastTime = "0";
             if (useNi == true) then
-                local recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
+                recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
             else
-                local recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId-1) / 60));
+                recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId-1) / 60));
             end
             imgui.SameLine();
             imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.GetStyle().FramePadding.x - imgui.CalcTextSize(recastTime));
