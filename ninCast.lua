@@ -23,16 +23,12 @@
 addon.author   = 'MathMatic';
 addon.name     = 'ninCast';
 addon.desc     = 'One click wheel casting.';
-addon.version  = '0.1';
+addon.version  = '0.2';
 
 require ('common');
 local imgui = require('imgui');
 local settings = require('settings');
 local inventory = require('inventory');
-
-local defaultConfig = T{
-}
-local config = settings.load(defaultConfig);
 
 local ninSpells = T{
     {spellName = 'Raiton',  spellId = 333,     itemId = 1173,    itemName = "Hiraishin",    color={1.0, 0.0, 1.0, 0.8}},
@@ -41,10 +37,22 @@ local ninSpells = T{
     {spellName = 'Hyoton',  spellId = 324,     itemId = 1164,    itemName = "Tsurara",      color={0.0, 1.0, 1.0, 0.8}}, 
     {spellName = 'Katon',   spellId = 321,     itemId = 1161,    itemName = "Uchitake",     color={1.0, 0.0, 0.0, 0.8}},
     {spellName = 'Suiton',  spellId = 336,     itemId = 1176,    itemName = "Mizu-deppo",   color={0.5, 0.5, 1.0, 0.8}},
-                };
+};
+
+local spellLevels = T{
+    {idx = 1, lvl = 'Ichi'},
+    {idx = 2, lvl = 'Ni'},
+    {idx = 3, lvl = 'San'},
+};
+
+local defaultConfig = T{
+    showGui = T{true};
+    castLevel = 2;
+}
+local config = settings.load(defaultConfig);
 
 local spellIdx = 0;
-local useNi = true;
+local configMenuOpen = {false};
 
 --------------------------------------------------------------------
 function castNextSpell(targetModifier)
@@ -102,30 +110,32 @@ ashita.events.register('command', 'command_cb', function (e)
     -- Block all related commands..
     e.blocked = true;
 
-	if (args[2]:any('cast')) then
+	if (#args == 1) then
+        configMenuOpen[1] = not configMenuOpen[1];
+
+    elseif (args[2]:any('cast')) then
         castNextSpell(args[3]);
 
         spellIdx = (spellIdx + 1) % 6;
-    end
 
-    if (#args == 2 and args[2]:any('next')) then
+    elseif (#args == 2 and args[2]:any('next')) then
         spellIdx = (spellIdx + 1) % 6;
-    end
 
-    if (#args == 2 and args[2]:any('prev')) then
+    elseif (#args == 2 and args[2]:any('prev')) then
         spellIdx = (spellIdx - 1);
         if (spellIdx < 0) then
             spellIdx = 5;
         end
+
     end
 
-    if (#args == 2 and args[2]:any('ichi')) then
-        useNi = false;
-    end
+--    if (#args == 2 and args[2]:any('ichi')) then
+--        useNi = false;
+--    end
 
-    if (#args == 2 and args[2]:any('ni')) then
-        useNi = true;
-    end
+--    if (#args == 2 and args[2]:any('ni')) then
+--        useNi = true;
+--    end
 
 end);
 
@@ -133,6 +143,59 @@ end);
 ashita.events.register('text_in', 'Clammy_HandleText', function (e)
 
 end);
+
+
+
+
+--------------------------------------------------------------------
+function renderMenu();
+
+	imgui.SetNextWindowSize({500});
+
+	if (imgui.Begin(string.format('%s v%s Configuration', addon.name, addon.version), configMenuOpen, bit.bor(ImGuiWindowFlags_AlwaysAutoResize))) then
+
+		imgui.Text("Options");
+
+		imgui.Checkbox('Show GUI', config.showGui);
+		imgui.ShowHelp('Shows the GUI.');
+
+        local helpText = "";
+        if (imgui.BeginCombo('Spell Level', spellLevels[config.castLevel].lvl, ImGuiComboFlags_None)) then
+            for idx,lvl in ipairs(spellLevels) do
+                --if (imgui.Selectable(lvl, spellLevels[config.castLevel] == spellLevels[lvl])) then
+                --    config.castLevel = lvl;
+                --end
+                --if (imgui.Selectable(lvl, true)) then
+                --    config.castLevel = lvl;
+                --end
+                helpText = helpText .. " " .. lvl;
+            end
+            imgui.EndCombo();
+        end
+        imgui.ShowHelp(helpText);
+
+        --imgui.ShowHelp('Use the selected cast level (Ichi, Ni, San)');
+
+
+
+        imgui.Separator();
+        imgui.Separator();
+        imgui.Separator();
+		if (imgui.Button('  Reset  ')) then
+            settings.reset();
+            print(chat.header(addon.name):append(chat.message('Settings reset to default.')));
+		end
+		imgui.ShowHelp('Resets settings to their default state.');
+        imgui.Separator();
+        imgui.Separator();
+        imgui.Separator();
+	end
+    --imgui.PopStyleColor(3);
+	imgui.End();
+end
+
+
+
 
 
 --------------------------------------------------------------------
@@ -146,6 +209,11 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 		return;
 	end
 --
+    if (configMenuOpen[1] == true) then
+        renderMenu();
+    end
+
+
 	local windowSize = 180;
     imgui.SetNextWindowBgAlpha(0.8);
     imgui.SetNextWindowSize({ windowSize, -1, }, ImGuiCond_Always);
@@ -172,11 +240,11 @@ ashita.events.register('d3d_present', 'present_cb', function ()
             imgui.Text(" (" .. toolsRemaining .. ")");
 
             local recastTime = "0";
-            if (useNi == true) then
-                recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
-            else
-                recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId-1) / 60));
-            end
+            --if (useNi == true) then
+            --    recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
+            --else
+            --    recastTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId-1) / 60));
+            --end
             imgui.SameLine();
             imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.GetStyle().FramePadding.x - imgui.CalcTextSize(recastTime));
             imgui.Text(recastTime);
