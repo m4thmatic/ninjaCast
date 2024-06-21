@@ -23,11 +23,12 @@
 addon.author   = 'Mathemagic';
 addon.name     = 'ninjaCast';
 addon.desc     = 'One click wheel casting / spell timers / tool counter / etc.';
-addon.version  = '0.3';
+addon.version  = '0.4';
 
 require ('common');
 local imgui = require('imgui');
 local settings = require('settings');
+local chat = require('chat');
 local inventory = require('inventory');
 local gdi = require('gdifonts.include');
 local ffi = require('ffi');
@@ -68,7 +69,9 @@ local defaultConfig = T{
 
 	},
 }
-local config = settings.load(defaultConfig);
+local config = T{
+    settings = settings.load(defaultConfig),
+}
 
 local fontSettings = {
     box_height = 0,
@@ -76,14 +79,14 @@ local fontSettings = {
     font_family = 'Courier New',
     font_flags = gdi.FontFlags.Bold,
     font_alignment = gdi.Alignment.Center,
-    font_height = config.shadowText.textSize * 2,
+    font_height = config.settings.shadowText.textSize * 2,
     font_color = 0xFFFFFFFF,
     gradient_color = 0xFFFFFFFF,
     outline_color = 0xFF000000,
     gradient_style = gdi.Gradient.TopToBottom,
-    outline_width = config.shadowText.outlineWidth,
-    position_x = config.shadowText.position_x,
-    position_y = config.shadowText.position_y,
+    outline_width = config.settings.shadowText.outlineWidth,
+    position_x = config.settings.shadowText.position_x,
+    position_y = config.settings.shadowText.position_y,
     visible = true,
     text = '',
 };
@@ -135,12 +138,17 @@ end
 --------------------------------------------------------------------
 function castNextSpell(spellType, targetModifier)
     local spellToCast = ninSpells[1 + spellIdx].spellName .. ": "
+
+    if (spellType == nil) then
+        print(chat.header(addon.name):append(chat.message('No spell type specified.')));
+        return
+    end
     spellType = string.lower(spellType)
 
     if (spellType == "ni") or (spellType == "ichi") or (spellType == "san") then
         spellToCast = spellToCast .. spellType;
     else
-        print("No spell type: " .. spellType)
+        print(chat.header(addon.name):append(chat.message('No spell type:' .. spellType)));
         return
     end
 
@@ -208,14 +216,14 @@ end
 --------------------------------------------------------------------
 local function setGDITextAttributes()
 	-- Set the text attributes
-	local tc = config.shadowText.textColor;
-	local tc2 = config.shadowText.textColor2;
-	local oc = config.shadowText.outlineColor;
-	myFontObject:set_font_color(argbToHex(config.shadowText.textOpacity, tc[1], tc[2], tc[3]));
-	myFontObject:set_gradient_color(argbToHex(config.shadowText.textOpacity, tc2[1], tc2[2], tc2[3]));
-	myFontObject:set_outline_color(argbToHex(config.shadowText.textOpacity, oc[1], oc[2], oc[3]));
-	myFontObject:set_position_x(config.shadowText.position_x);
-	myFontObject:set_position_y(config.shadowText.position_y);
+	local tc = config.settings.shadowText.textColor;
+	local tc2 = config.settings.shadowText.textColor2;
+	local oc = config.settings.shadowText.outlineColor;
+	myFontObject:set_font_color(argbToHex(config.settings.shadowText.textOpacity, tc[1], tc[2], tc[3]));
+	myFontObject:set_gradient_color(argbToHex(config.settings.shadowText.textOpacity, tc2[1], tc2[2], tc2[3]));
+	myFontObject:set_outline_color(argbToHex(config.settings.shadowText.textOpacity, oc[1], oc[2], oc[3]));
+	myFontObject:set_position_x(config.settings.shadowText.position_x);
+	myFontObject:set_position_y(config.settings.shadowText.position_y);
 end
 
 --------------------------------------------------------------------
@@ -234,13 +242,14 @@ end);
 settings.register('settings', 'settings_update', function(s)
     -- Update the settings table..
     if (s ~= nil) then
-        settings = s;
+        config.settings = s;
  
         setGDITextAttributes();
-	end
+
+        -- Save the current settings..
+        settings.save();
+    end
 	
-    -- Save the current settings..
-    settings.save();
 end);
 
 --------------------------------------------------------------------
@@ -251,27 +260,26 @@ ashita.events.register('command', 'command_cb', function (e)
         return;
     end
 
-    -- Block all related commands..
-    e.blocked = true;
-
 	if (#args == 1) then
         configMenuOpen[1] = not configMenuOpen[1];
-
     elseif (args[2]:any('cast')) then
         castNextSpell(args[3], args[4]);
-
         spellIdx = (spellIdx + 1) % 6;
-
     elseif (#args == 2 and args[2]:any('next')) then
         spellIdx = (spellIdx + 1) % 6;
-
     elseif (#args == 2 and args[2]:any('prev')) then
         spellIdx = (spellIdx - 1);
         if (spellIdx < 0) then
             spellIdx = 5;
         end
-
+    else
+        --If not a ninjaCast command, don't block to allow normal "/nin spellname" casting
+        e.blocked = false;
+        return;
     end
+
+    --Otherwise block /nin command from client
+    e.blocked = true;
 
 end);
 
@@ -293,8 +301,8 @@ ashita.events.register('mouse', 'mouse_cb', function (e)
             dragActive = false;
             e.blocked = true;
 			
-			config.shadowText.position_x = myFontObject.settings.position_x;
-			config.shadowText.position_y = myFontObject.settings.position_y;
+			config.settings.shadowText.position_x = myFontObject.settings.position_x;
+			config.settings.shadowText.position_y = myFontObject.settings.position_y;
 			settings.save();
             return;
         end
@@ -333,7 +341,7 @@ end
 --------------------------------------------------------------------
 function renderMenu();
 
-	imgui.SetNextWindowSize({500});
+	imgui.SetNextWindowSize({-1});
 
 	if (imgui.Begin(string.format('%s v%s Configuration', addon.name, addon.version), configMenuOpen, bit.bor(ImGuiWindowFlags_AlwaysAutoResize))) then
 
@@ -341,37 +349,39 @@ function renderMenu();
         imgui.Text(" ");
         imgui.Separator();
         --------------------------------------------------------------------
-		imgui.Text("Wheel Window Options");
-        imgui.Text(" ");
+		imgui.BeginChild('wheelSettings', { 0, 300, }, true);
 
-		imgui.Checkbox('Show Elemental Wheel', config.components.showEleWindow);
-		imgui.ShowHelp('Shows the Elemental Wheel Window.');
+            imgui.Text("Wheel Window Options");
+            imgui.Text(" ");
 
-		imgui.Checkbox(' - Show tool count', config.components.showEleTools);
-		imgui.ShowHelp('Shows the tool count.');
+            imgui.Checkbox('Show Elemental Wheel', config.settings.components.showEleWindow);
+            imgui.ShowHelp('Shows the Elemental Wheel Window.');
 
-		imgui.Checkbox(' - Show recast times :Ichi', config.components.showEleRecastIchi);
-		imgui.ShowHelp('Shows the GUI.');
+            imgui.Checkbox(' - Show tool count', config.settings.components.showEleTools);
+            imgui.ShowHelp('Shows the tool count.');
 
-		imgui.Checkbox(' - Show recast times :Ni', config.components.showEleRecastNi);
-		imgui.ShowHelp('Shows the GUI.');
+            imgui.Checkbox(' - Show recast times :Ichi', config.settings.components.showEleRecastIchi);
+            imgui.ShowHelp('Shows the GUI.');
 
-        --imgui.Checkbox('Show recast times :San', config.components.showEleRecastSan);
-		--imgui.ShowHelp('Shows the GUI.');
+            imgui.Checkbox(' - Show recast times :Ni', config.settings.components.showEleRecastNi);
+            imgui.ShowHelp('Shows the GUI.');
 
-        imgui.Checkbox(' - Show Current Wheel Spell', config.components.showEleArrow);
-		imgui.ShowHelp(' - Shows the wheel spell to cast next.');
+            --imgui.Checkbox('Show recast times :San', config.settings.components.showEleRecastSan);
+            --imgui.ShowHelp('Shows the GUI.');
 
-		imgui.SliderFloat('Window Scale', config.eleWindow.scale, 0.1, 2.0, '%.2f');
-		imgui.ShowHelp('Scale the window bigger/smaller.');
+            imgui.Checkbox(' - Show Current Wheel Spell', config.settings.components.showEleArrow);
+            imgui.ShowHelp(' - Shows the wheel spell to cast next.');
 
-		imgui.SliderFloat('Window Opacity', config.eleWindow.opacity, 0.1, 1.0, '%.2f');
-		imgui.ShowHelp('Set the window opacity.');
+            imgui.SliderFloat('Window Scale', config.settings.eleWindow.scale, 0.1, 2.0, '%.2f');
+            imgui.ShowHelp('Scale the window bigger/smaller.');
 
-        imgui.ColorEdit4("Text Color", config.eleWindow.textColor);
-		imgui.ColorEdit4("Border Color", config.eleWindow.borderColor);
-        imgui.ColorEdit4("Background Color", config.eleWindow.backgroundColor);
+            imgui.SliderFloat('Window Opacity', config.settings.eleWindow.opacity, 0.1, 1.0, '%.2f');
+            imgui.ShowHelp('Set the window opacity.');
 
+            imgui.ColorEdit4("Text Color", config.settings.eleWindow.textColor);
+            imgui.ColorEdit4("Border Color", config.settings.eleWindow.borderColor);
+            imgui.ColorEdit4("Background Color", config.settings.eleWindow.backgroundColor);
+        imgui.EndChild();
 
         --------------------------------------------------------------------
         imgui.Text(" ");
@@ -380,33 +390,33 @@ function renderMenu();
         imgui.Text(" ");
         imgui.Separator();
 
-		imgui.Checkbox('Show Shadow Counter', config.components.showShadowCounter);
+		imgui.Checkbox('Show Shadow Counter', config.settings.components.showShadowCounter);
 		imgui.ShowHelp('Shows the number of current shadows.');
 
-        local textOpacity  = T{config.shadowText.textOpacity};
-        local textSize     = T{config.shadowText.textSize};			
-        local outlineWidth = T{config.shadowText.outlineWidth};
-        local alwaysShow   = T{config.shadowText.alwaysShow};			
+        local textOpacity  = T{config.settings.shadowText.textOpacity};
+        local textSize     = T{config.settings.shadowText.textSize};			
+        local outlineWidth = T{config.settings.shadowText.outlineWidth};
+        local alwaysShow   = T{config.settings.shadowText.alwaysShow};			
 
         imgui.SliderFloat('Window Opacity', textOpacity, 0.01, 1.0, '%.2f');
         imgui.ShowHelp('Set the window opacity.');		
-        config.shadowText.textOpacity = textOpacity[1];
+        config.settings.shadowText.textOpacity = textOpacity[1];
         
         imgui.SliderFloat('Font Size', textSize, 10, 80, '%1.0f');
         imgui.ShowHelp('Set the font size.');
-        config.shadowText.textSize = textSize[1];
-        myFontObject:set_font_height(config.shadowText.textSize * 2);
+        config.settings.shadowText.textSize = textSize[1];
+        myFontObject:set_font_height(config.settings.shadowText.textSize * 2);
 
-        imgui.ColorEdit3("Top Color", config.shadowText.textColor);
-        imgui.ColorEdit3("Bottom Color", config.shadowText.textColor2);
-        imgui.ColorEdit3("Outline Color", config.shadowText.outlineColor);
+        imgui.ColorEdit3("Top Color", config.settings.shadowText.textColor);
+        imgui.ColorEdit3("Bottom Color", config.settings.shadowText.textColor2);
+        imgui.ColorEdit3("Outline Color", config.settings.shadowText.outlineColor);
         
         setGDITextAttributes();
 
         imgui.SliderFloat('Outline Width', outlineWidth, 0, 10, '%1.0f');
         imgui.ShowHelp('Set the thickness of the text outline.');
-        config.shadowText.outlineWidth = outlineWidth[1];
-        myFontObject:set_outline_width(config.shadowText.outlineWidth)
+        config.settings.shadowText.outlineWidth = outlineWidth[1];
+        myFontObject:set_outline_width(config.settings.shadowText.outlineWidth)
 
 
         --------------------------------------------------------------------
@@ -447,6 +457,12 @@ function renderMenu();
 
         imgui.Text(" ");
         imgui.Text(" ");
+        if (imgui.Button('  Save  ')) then
+			settings.save();
+			configMenuOpen[1] = false;
+            print(chat.header(addon.name):append(chat.message('Settings saved.')));
+		end
+        imgui.SameLine();
 		if (imgui.Button('  Reset  ')) then
             settings.reset();
             print(chat.header(addon.name):append(chat.message('Settings reset to default.')));
@@ -489,25 +505,24 @@ ashita.events.register('d3d_present', 'present_cb', function ()
     showEleRecastNi     = T{true};
 
 
-	local windowSize = 250 * config.eleWindow.scale[1];
-    imgui.SetNextWindowBgAlpha(0.8);
-    imgui.SetNextWindowSize({ windowSize, -1, }, ImGuiCond_Always);
-    if (config.components.showEleWindow[1]) then --If show elemental wheel window is selected
-        imgui.PushStyleColor(ImGuiCol_WindowBg, config.eleWindow.backgroundColor);
-        imgui.PushStyleColor(ImGuiCol_Border, config.eleWindow.borderColor);
-        imgui.PushStyleColor(ImGuiCol_Text, config.eleWindow.textColor);
+    imgui.SetNextWindowBgAlpha(config.settings.eleWindow.opacity[1]);
+    imgui.SetNextWindowSize({ -1, -1, }, ImGuiCond_Always);
+    if (config.settings.components.showEleWindow[1]) then --If show elemental wheel window is selected
+        imgui.PushStyleColor(ImGuiCol_WindowBg, config.settings.eleWindow.backgroundColor);
+        imgui.PushStyleColor(ImGuiCol_Border, config.settings.eleWindow.borderColor);
+        imgui.PushStyleColor(ImGuiCol_Text, config.settings.eleWindow.textColor);
 
         if (imgui.Begin('ninjaCastWheel', true, bit.bor(ImGuiWindowFlags_NoDecoration))) then
-            imgui.SetWindowFontScale(config.eleWindow.scale[1]); -- set window scale
+            imgui.SetWindowFontScale(config.settings.eleWindow.scale[1]); -- set window scale
 
-            imgui.Text("Current   Tools      Recast Time");
-            imgui.Text("Spell     Remaining     Ichi  Ni");
+            imgui.Text("Current   Tools       Recast");
+            imgui.Text("Spell     Remaining   Ichi   Ni");
             imgui.Separator();
 
             for idx,spell in ipairs(ninSpells) do
 
                 --If show current spell is selected, and displaying spell arrow
-                if (idx == spellIdx + 1) and (config.components.showEleArrow[1]) then
+                if (idx == spellIdx + 1) and (config.settings.components.showEleArrow[1]) then
                     imgui.TextColored({1.0, 0.95, 0.0, 0.8}, ">");
                 else
                     imgui.Text(" ");
@@ -519,7 +534,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
                 
                 imgui.SameLine();
 
-                if (config.components.showEleTools[1]) then
+                if (config.settings.components.showEleTools[1]) then
                     local toolsRemaining = tostring(NinjutsuCost(spell.itemId));
                     imgui.SameLine();
                     --imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(spell.spellName));
@@ -528,14 +543,14 @@ ashita.events.register('d3d_present', 'present_cb', function ()
                 end
 
 
-                if (config.components.showEleRecastIchi[1]) then
+                if (config.settings.components.showEleRecastIchi[1]) then
                     local recastIchiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId-1) / 60));
                     imgui.SameLine();
-                    imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.GetStyle().FramePadding.x - imgui.CalcTextSize(recastIchiTime) - imgui.CalcTextSize("     "));
+                    imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.GetStyle().FramePadding.x - imgui.CalcTextSize(recastIchiTime) - imgui.CalcTextSize("      "));
                     imgui.Text(recastIchiTime);
                 end
 
-                if (config.components.showEleRecastNi[1]) then
+                if (config.settings.components.showEleRecastNi[1]) then
                     local recastNiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));;
                     imgui.SameLine();
                     imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.GetStyle().FramePadding.x - imgui.CalcTextSize(recastNiTime) - imgui.CalcTextSize(" "));
@@ -548,7 +563,7 @@ ashita.events.register('d3d_present', 'present_cb', function ()
         imgui.End();
     end
 
-    if (config.components.showShadowCounter[1]) then --If show elemental wheel window is selected
+    if (config.settings.components.showShadowCounter[1]) then --If show elemental wheel window is selected
         myFontObject:set_visible(true);
         myFontObject:set_text(GetShadowCount());
     else
