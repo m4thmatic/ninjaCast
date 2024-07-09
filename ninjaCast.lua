@@ -23,13 +23,12 @@
 addon.author   = 'Mathemagic';
 addon.name     = 'ninjaCast';
 addon.desc     = 'One click wheel casting / spell timers / tool counter / etc.';
-addon.version  = '0.4';
+addon.version  = '0.5';
 
 require ('common');
 local imgui = require('imgui');
 local settings = require('settings');
 local chat = require('chat');
-local inventory = require('inventory');
 local gdi = require('gdifonts.include');
 local ffi = require('ffi');
 
@@ -97,16 +96,17 @@ local dragActive = false;
 
 
 local ninSpells = T{
-    {spellName = 'Hyoton',  spellId = 324,     itemId = 1164,    itemName = "Tsurara",      color={0.0, 1.0, 1.0, 0.8}}, 
-    {spellName = 'Katon',   spellId = 321,     itemId = 1161,    itemName = "Uchitake",     color={1.0, 0.0, 0.0, 0.8}},
-    {spellName = 'Suiton',  spellId = 336,     itemId = 1176,    itemName = "Mizu-deppo",   color={0.5, 0.5, 1.0, 0.8}},
-    {spellName = 'Raiton',  spellId = 333,     itemId = 1173,    itemName = "Hiraishin",    color={1.0, 0.0, 1.0, 0.8}},
-    {spellName = 'Doton',   spellId = 330,     itemId = 1170,    itemName = "Makibishi",    color={1.0, 1.0, 0.0, 0.8}},
-    {spellName = 'Huton',   spellId = 327,     itemId = 1167,    itemName = "Kawahori-ogi", color={0.0, 1.0, 0.0, 0.8}},
+    {spellName = 'Hyoton',  spellId = 323,     itemId = 1164,    itemName = "Tsurara",      color={0.0, 1.0, 1.0, 0.8}}, 
+    {spellName = 'Katon',   spellId = 320,     itemId = 1161,    itemName = "Uchitake",     color={1.0, 0.0, 0.0, 0.8}},
+    {spellName = 'Suiton',  spellId = 335,     itemId = 1176,    itemName = "Mizu-deppo",   color={0.5, 0.5, 1.0, 0.8}},
+    {spellName = 'Raiton',  spellId = 332,     itemId = 1173,    itemName = "Hiraishin",    color={1.0, 0.0, 1.0, 0.8}},
+    {spellName = 'Doton',   spellId = 329,     itemId = 1170,    itemName = "Makibishi",    color={1.0, 1.0, 0.0, 0.8}},
+    {spellName = 'Huton',   spellId = 326,     itemId = 1167,    itemName = "Kawahori-ogi", color={0.0, 1.0, 0.0, 0.8}},
 };
 
 local spellIdx = 0;
 local configMenuOpen = {false};
+
 
 --------------------------------------------------------------------------------
 -------------- This function is copied from the XITools addon ------------------
@@ -162,18 +162,18 @@ function castNextSpell(spellType, targetModifier)
 end
 
 --------------------------------------------------------------------
-local function NinjutsuCost(item)
+local function ninjaToolsRemaining(itemId)
+    local inventory = AshitaCore:GetMemoryManager():GetInventory();
+    local resources = AshitaCore:GetResourceManager();
+
     local itemCount = 0;
-    --for _,item in ipairs(items) do
-        local itemData = inventory:GetItemData(item);
-        if (itemData ~= nil) then
-            for _,itemEntry in ipairs(itemData.Locations) do
-                if (itemEntry.Container == 0) then
-                    itemCount = itemCount + inventory:GetItemTable(itemEntry.Container, itemEntry.Index).Count;
-                end
-            end
+
+    for invSlot = 0,inventory:GetContainerCountMax(0) do
+        local item = inventory:GetContainerItem(0, invSlot);
+        if ((item ~= nil) and (item.Id == itemId)) then
+            itemCount = itemCount + item.Count;
         end
-    --end
+    end
 
     return itemCount;
 end
@@ -225,100 +225,6 @@ local function setGDITextAttributes()
 	myFontObject:set_position_x(config.settings.shadowText.position_x);
 	myFontObject:set_position_y(config.settings.shadowText.position_y);
 end
-
---------------------------------------------------------------------
-ashita.events.register('load', 'load_cb', function()
-	myFontObject = gdi:create_object(fontSettings, false);
-    setGDITextAttributes();
-end);
-
---------------------------------------------------------------------
-ashita.events.register('unload', 'unload_cb', function()
-    settings.save();
-    gdi:destroy_interface();
-end);
-
---------------------------------------------------------------------
-settings.register('settings', 'settings_update', function(s)
-    -- Update the settings table..
-    if (s ~= nil) then
-        config.settings = s;
- 
-        setGDITextAttributes();
-
-        -- Save the current settings..
-        settings.save();
-    end
-	
-end);
-
---------------------------------------------------------------------
-ashita.events.register('command', 'command_cb', function (e)
-    -- Parse the command arguments..
-    local args = e.command:args();
-    if (#args == 0 or not args[1]:any("/nin")) then
-        return;
-    end
-
-	if (#args == 1) then
-        configMenuOpen[1] = not configMenuOpen[1];
-    elseif (args[2]:any('cast')) then
-        castNextSpell(args[3], args[4]);
-        spellIdx = (spellIdx + 1) % 6;
-    elseif (#args == 2 and args[2]:any('next')) then
-        spellIdx = (spellIdx + 1) % 6;
-    elseif (#args == 2 and args[2]:any('prev')) then
-        spellIdx = (spellIdx - 1);
-        if (spellIdx < 0) then
-            spellIdx = 5;
-        end
-    else
-        --If not a ninjaCast command, don't block to allow normal "/nin spellname" casting
-        e.blocked = false;
-        return;
-    end
-
-    --Otherwise block /nin command from client
-    e.blocked = true;
-
-end);
-
---------------------------------------------------------------------
-ashita.events.register('text_in', 'Clammy_HandleText', function (e)
-
-end);
-
---------------------------------------------------------------------
-ashita.events.register('mouse', 'mouse_cb', function (e)
-    if (dragActive) then
-        local currentX = myFontObject.settings.position_x;
-        local currentY = myFontObject.settings.position_y;
-        myFontObject:set_position_x(currentX + (e.x - lastPositionX));
-        myFontObject:set_position_y(currentY + (e.y - lastPositionY));
-        lastPositionX = e.x;
-        lastPositionY = e.y;
-        if (e.message == 514) or (IsControlHeld() == false) then
-            dragActive = false;
-            e.blocked = true;
-			
-			config.settings.shadowText.position_x = myFontObject.settings.position_x;
-			config.settings.shadowText.position_y = myFontObject.settings.position_y;
-			settings.save();
-            return;
-        end
-    end
-    
-    if (e.message == 513) then
-        if (HitTest(e.x, e.y)) and (IsControlHeld()) then
-            e.blocked = true;
-            dragActive = true;
-            lastPositionX = e.x;
-            lastPositionY = e.y;
-            return;
-        end
-    end
-
-end);
 
 --------------------------------------------------------------------
 function hexToRBG(hexVal)
@@ -384,65 +290,45 @@ function renderMenu();
         imgui.EndChild();
 
         --------------------------------------------------------------------
-        imgui.Text(" ");
-        --------------------------------------------------------------------
-		imgui.Text("Shadow Counter Options");
-        imgui.Text(" ");
-        imgui.Separator();
-
-		imgui.Checkbox('Show Shadow Counter', config.settings.components.showShadowCounter);
-		imgui.ShowHelp('Shows the number of current shadows.');
-
-        local textOpacity  = T{config.settings.shadowText.textOpacity};
-        local textSize     = T{config.settings.shadowText.textSize};			
-        local outlineWidth = T{config.settings.shadowText.outlineWidth};
-        local alwaysShow   = T{config.settings.shadowText.alwaysShow};			
-
-        imgui.SliderFloat('Window Opacity', textOpacity, 0.01, 1.0, '%.2f');
-        imgui.ShowHelp('Set the window opacity.');		
-        config.settings.shadowText.textOpacity = textOpacity[1];
-        
-        imgui.SliderFloat('Font Size', textSize, 10, 80, '%1.0f');
-        imgui.ShowHelp('Set the font size.');
-        config.settings.shadowText.textSize = textSize[1];
-        myFontObject:set_font_height(config.settings.shadowText.textSize * 2);
-
-        imgui.ColorEdit3("Top Color", config.settings.shadowText.textColor);
-        imgui.ColorEdit3("Bottom Color", config.settings.shadowText.textColor2);
-        imgui.ColorEdit3("Outline Color", config.settings.shadowText.outlineColor);
-        
-        setGDITextAttributes();
-
-        imgui.SliderFloat('Outline Width', outlineWidth, 0, 10, '%1.0f');
-        imgui.ShowHelp('Set the thickness of the text outline.');
-        config.settings.shadowText.outlineWidth = outlineWidth[1];
-        myFontObject:set_outline_width(config.settings.shadowText.outlineWidth)
-
-
-        --------------------------------------------------------------------
-        --[[
-        local helpText = "";
-        if (imgui.BeginCombo('Spell Level', spellLevels[config.castLevel].lvl, ImGuiComboFlags_None)) then
-            for idx,lvl in ipairs(spellLevels) do
-                --if (imgui.Selectable(lvl, spellLevels[config.castLevel] == spellLevels[lvl])) then
-                --    config.castLevel = lvl;
-                --end
-                --if (imgui.Selectable(lvl, true)) then
-                --    config.castLevel = lvl;
-                --end
-                helpText = helpText .. " " .. lvl;
-            end
-            imgui.EndCombo();
-        end
-        imgui.ShowHelp(helpText);
-        --]]
-        --imgui.ShowHelp('Use the selected cast level (Ichi, Ni, San)');
+        --imgui.Text(" ");
+        --imgui.Separator();
         --------------------------------------------------------------------
 
-        imgui.Text(" ");
+        imgui.BeginChild('shadowCountSettings', { 0, 250, }, true);
+    		imgui.Text("Shadow Counter Options");
+            imgui.Text(" ");
+
+            imgui.Checkbox('Show Shadow Counter', config.settings.components.showShadowCounter);
+            imgui.ShowHelp('Shows the number of current shadows.');
+
+            local textOpacity  = T{config.settings.shadowText.textOpacity};
+            local textSize     = T{config.settings.shadowText.textSize};			
+            local outlineWidth = T{config.settings.shadowText.outlineWidth};
+            local alwaysShow   = T{config.settings.shadowText.alwaysShow};			
+
+            imgui.SliderFloat('Window Opacity', textOpacity, 0.01, 1.0, '%.2f');
+            imgui.ShowHelp('Set the window opacity.');		
+            config.settings.shadowText.textOpacity = textOpacity[1];
+            
+            imgui.SliderFloat('Font Size', textSize, 10, 80, '%1.0f');
+            imgui.ShowHelp('Set the font size.');
+            config.settings.shadowText.textSize = textSize[1];
+            myFontObject:set_font_height(config.settings.shadowText.textSize * 2);
+
+            imgui.ColorEdit3("Top Color", config.settings.shadowText.textColor);
+            imgui.ColorEdit3("Bottom Color", config.settings.shadowText.textColor2);
+            imgui.ColorEdit3("Outline Color", config.settings.shadowText.outlineColor);
+            
+            setGDITextAttributes();
+
+            imgui.SliderFloat('Outline Width', outlineWidth, 0, 10, '%1.0f');
+            imgui.ShowHelp('Set the thickness of the text outline.');
+            config.settings.shadowText.outlineWidth = outlineWidth[1];
+            myFontObject:set_outline_width(config.settings.shadowText.outlineWidth)
+        imgui.EndChild();
+
         imgui.Separator();
         imgui.Text(" ");
-
         imgui.Text("Commands:");
         imgui.Text(" ");
         imgui.Text("/nin              | This Menu");
@@ -470,13 +356,177 @@ function renderMenu();
 		imgui.ShowHelp('Resets settings to their default state.');
         imgui.Separator();
 	end
-    --imgui.PopStyleColor(3);
 	imgui.End();
 end
 
+--------------------------------------------------------------------
+function renderWheelWindow();
+    imgui.SetNextWindowBgAlpha(config.settings.eleWindow.opacity[1]);
+    imgui.SetNextWindowSize({ -1, -1, }, ImGuiCond_Always);
+    imgui.PushStyleColor(ImGuiCol_WindowBg, config.settings.eleWindow.backgroundColor);
+    imgui.PushStyleColor(ImGuiCol_Border, config.settings.eleWindow.borderColor);
+    imgui.PushStyleColor(ImGuiCol_Text, config.settings.eleWindow.textColor);
 
+    if (imgui.Begin('ninjaCastWheel', true, bit.bor(ImGuiWindowFlags_NoDecoration))) then
+        imgui.SetWindowFontScale(config.settings.eleWindow.scale[1]); -- set window scale
+        imgui.Text("Current   Tools       Recast");
+        imgui.Text("Spell     Remaining   Ichi   Ni");
+        imgui.Separator();
+        for idx,spell in ipairs(ninSpells) do
+            --If show current spell is selected, and displaying spell arrow
+            if (idx == spellIdx + 1) and (config.settings.components.showEleArrow[1]) then
+                imgui.TextColored({1.0, 0.95, 0.0, 0.8}, ">");
+            else
+                imgui.Text(" ");
+            end
+            imgui.SameLine();
+            imgui.TextColored(spell.color, spell.spellName .. ":");
+            
+            imgui.SameLine();
+            if (config.settings.components.showEleTools[1]) then
+                local toolsRemaining = tostring(ninjaToolsRemaining(spell.itemId));
+                imgui.SameLine();
+                --imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(spell.spellName));
+                imgui.SetCursorPosX(imgui.CalcTextSize("          "))
+                imgui.Text(" [" .. toolsRemaining .. "]");
+            end
+            if (config.settings.components.showEleRecastIchi[1]) then
+                local recastIchiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
+                imgui.SameLine();
+                imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.GetStyle().FramePadding.x - imgui.CalcTextSize(recastIchiTime) - imgui.CalcTextSize("      "));
+                imgui.Text(recastIchiTime);
+            end
+            if (config.settings.components.showEleRecastNi[1]) then
+                local recastNiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+1) / 60));;
+                imgui.SameLine();
+                imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.GetStyle().FramePadding.x - imgui.CalcTextSize(recastNiTime) - imgui.CalcTextSize(" "));
+                imgui.Text(recastNiTime);
+            end
+        end
+        imgui.SetWindowFontScale(1.0); -- reset window scale
+    end
+    imgui.PopStyleColor(3);
+    imgui.End();
 
+end
 
+--------------------------------------------------------------------
+ashita.events.register('load', 'load_cb', function()
+	myFontObject = gdi:create_object(fontSettings, false);
+    setGDITextAttributes();
+end);
+
+--------------------------------------------------------------------
+ashita.events.register('unload', 'unload_cb', function()
+    settings.save();
+    gdi:destroy_interface();
+end);
+
+--------------------------------------------------------------------
+settings.register('settings', 'settings_update', function(s)
+    -- Update the settings table..
+    if (s ~= nil) then
+        config.settings = s;
+ 
+         -- Save the current settings..
+        settings.save();
+ 
+        setGDITextAttributes();
+    end
+	
+end);
+
+--------------------------------------------------------------------
+ashita.events.register('command', 'command_cb', function (e)
+    -- Parse the command arguments..
+    local args = e.command:args();
+    if (#args == 0 or not args[1]:any("/nin")) then
+        return;
+    end
+
+	if (#args == 1) then
+        configMenuOpen[1] = not configMenuOpen[1];
+    elseif (args[2]:any('cast')) then
+        castNextSpell(args[3], args[4]);
+        --spellIdx = (spellIdx + 1) % 6;
+    elseif (#args == 2 and args[2]:any('next')) then
+        spellIdx = (spellIdx + 1) % 6;
+    elseif (#args == 2 and args[2]:any('prev')) then
+        spellIdx = (spellIdx - 1);
+        if (spellIdx < 0) then
+            spellIdx = 5;
+        end
+    else
+        --If not a ninjaCast command, don't block to allow normal "/nin spellname" casting
+        e.blocked = false;
+        return;
+    end
+
+    --Otherwise block /nin command from client
+    e.blocked = true;
+
+end);
+
+--------------------------------------------------------------------
+ashita.events.register('packet_in', 'packet_in_cb', function (e)
+    local playerId = AshitaCore:GetMemoryManager():GetParty():GetMemberServerId(0);
+    local userId = struct.unpack('L', e.data, 0x05 + 1);
+    local actionType = ashita.bits.unpack_be(e.data_raw, 10, 2, 4);
+    local abilityID = ashita.bits.unpack_be(e.data_raw, 10, 6, 16);
+    --local abilityID = bit.band(bit.rshift(struct.unpack('H', e.data, 0x0A + 0x01),6), 0xffff);
+
+    if (userId == playerId) then
+        if (actionType == 4) then
+            for idx, spell in pairs(ninSpells) do
+                if (abilityID == spell.spellId) or 
+                   (abilityID == spell.spellId+1) or
+                   (abilityID == spell.spellId+2) then
+                    spellIdx = idx % 6;
+                end
+            end
+              
+
+        end
+    end    
+
+end);
+
+--------------------------------------------------------------------
+ashita.events.register('text_in', 'Clammy_HandleText', function (e)
+
+end);
+
+--------------------------------------------------------------------
+ashita.events.register('mouse', 'mouse_cb', function (e)
+    if (dragActive) then
+        local currentX = myFontObject.settings.position_x;
+        local currentY = myFontObject.settings.position_y;
+        myFontObject:set_position_x(currentX + (e.x - lastPositionX));
+        myFontObject:set_position_y(currentY + (e.y - lastPositionY));
+        lastPositionX = e.x;
+        lastPositionY = e.y;
+        if (e.message == 514) or (IsControlHeld() == false) then
+            dragActive = false;
+            e.blocked = true;
+			
+			config.settings.shadowText.position_x = myFontObject.settings.position_x;
+			config.settings.shadowText.position_y = myFontObject.settings.position_y;
+			settings.save();
+            return;
+        end
+    end
+    
+    if (e.message == 513) then
+        if (HitTest(e.x, e.y)) and (IsControlHeld()) then
+            e.blocked = true;
+            dragActive = true;
+            lastPositionX = e.x;
+            lastPositionY = e.y;
+            return;
+        end
+    end
+
+end);
 
 --------------------------------------------------------------------
 --[[
@@ -494,74 +544,15 @@ ashita.events.register('d3d_present', 'present_cb', function ()
 	if (player == nil) then -- when zoning
 		return;
 	end
---
-    if (configMenuOpen[1] == true) then
+
+    if (configMenuOpen[1] == true) then --If menu is open
         renderMenu();
     end
 
-
-
-    showEleRecastIchi   = T{true};
-    showEleRecastNi     = T{true};
-
-
-    imgui.SetNextWindowBgAlpha(config.settings.eleWindow.opacity[1]);
-    imgui.SetNextWindowSize({ -1, -1, }, ImGuiCond_Always);
     if (config.settings.components.showEleWindow[1]) then --If show elemental wheel window is selected
-        imgui.PushStyleColor(ImGuiCol_WindowBg, config.settings.eleWindow.backgroundColor);
-        imgui.PushStyleColor(ImGuiCol_Border, config.settings.eleWindow.borderColor);
-        imgui.PushStyleColor(ImGuiCol_Text, config.settings.eleWindow.textColor);
-
-        if (imgui.Begin('ninjaCastWheel', true, bit.bor(ImGuiWindowFlags_NoDecoration))) then
-            imgui.SetWindowFontScale(config.settings.eleWindow.scale[1]); -- set window scale
-
-            imgui.Text("Current   Tools       Recast");
-            imgui.Text("Spell     Remaining   Ichi   Ni");
-            imgui.Separator();
-
-            for idx,spell in ipairs(ninSpells) do
-
-                --If show current spell is selected, and displaying spell arrow
-                if (idx == spellIdx + 1) and (config.settings.components.showEleArrow[1]) then
-                    imgui.TextColored({1.0, 0.95, 0.0, 0.8}, ">");
-                else
-                    imgui.Text(" ");
-                end
-
-                imgui.SameLine();
-
-                imgui.TextColored(spell.color, spell.spellName .. ":");
-                
-                imgui.SameLine();
-
-                if (config.settings.components.showEleTools[1]) then
-                    local toolsRemaining = tostring(NinjutsuCost(spell.itemId));
-                    imgui.SameLine();
-                    --imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(spell.spellName));
-                    imgui.SetCursorPosX(imgui.CalcTextSize("          "))
-                    imgui.Text(" [" .. toolsRemaining .. "]");
-                end
-
-
-                if (config.settings.components.showEleRecastIchi[1]) then
-                    local recastIchiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId-1) / 60));
-                    imgui.SameLine();
-                    imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.GetStyle().FramePadding.x - imgui.CalcTextSize(recastIchiTime) - imgui.CalcTextSize("      "));
-                    imgui.Text(recastIchiTime);
-                end
-
-                if (config.settings.components.showEleRecastNi[1]) then
-                    local recastNiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));;
-                    imgui.SameLine();
-                    imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.GetColumnWidth() - imgui.GetStyle().FramePadding.x - imgui.CalcTextSize(recastNiTime) - imgui.CalcTextSize(" "));
-                    imgui.Text(recastNiTime);
-                end
-            end
-            imgui.SetWindowFontScale(1.0); -- reset window scale
-        end
-        imgui.PopStyleColor(3);
-        imgui.End();
+        renderWheelWindow();
     end
+
 
     if (config.settings.components.showShadowCounter[1]) then --If show elemental wheel window is selected
         myFontObject:set_visible(true);
