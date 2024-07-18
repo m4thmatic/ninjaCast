@@ -1,4 +1,4 @@
-# Ninja Cast
+# ninjaCast
 Addon for FFXI / AshitaXI v4 that includes the following:
  - Discrete / graphically adjustable shadow counter.
  - Display to show tool count & spell recast.

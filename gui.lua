@@ -98,27 +98,28 @@ function renderNinjutsuWindow(config)
         --imgui.Text("Current   Tools       Recast");
         --imgui.Text("Spell     Remaining   Ichi   Ni");
 
-        imgui.Text("Current");
+        imgui.Text("Current  ");
         if (config.settings.components.showSpellTools[1]) then
-            imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("           ")); imgui.Text("Tools");
+            imgui.SameLine(); imgui.Text("Tools      ");
         end
-        if (config.settings.components.showRecastIchi[1] or config.settings.components.showRecastNi[1]) then
-            imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                       ")); imgui.Text("Recast");
+        if (config.settings.components.showRecastIchi[1] or 
+            config.settings.components.showRecastNi[1] or
+            config.settings.components.showRecastSan[1]) then
+            imgui.SameLine(); imgui.Text("Recast");
         end
 
-
-        imgui.Text("Spell");
+        imgui.Text("Spell    ");
         if (config.settings.components.showSpellTools[1]) then
-            imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("           ")); imgui.Text("Remaining");
+            imgui.SameLine(); imgui.Text("Remaining  ");
         end
         if (config.settings.components.showRecastIchi[1]) then
-            imgui.SameLine(); imgui.Text("  Ichi");
+            imgui.SameLine(); imgui.Text("Ichi  ");
         end
         if (config.settings.components.showRecastNi[1]) then
-            imgui.SameLine(); imgui.Text("  Ni");
+            imgui.SameLine(); imgui.Text("Ni   ");
         end
         if (config.settings.components.showRecastSan[1]) then
-            imgui.SameLine(); imgui.Text("  San");
+            imgui.SameLine(); imgui.Text("San  ");
         end
 
         imgui.Separator();
@@ -137,37 +138,34 @@ function renderNinjutsuWindow(config)
             end
             imgui.SameLine();
             imgui.TextColored(spell.color, spell.spellName .. ":");
-            
+
             imgui.SameLine();
+            imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("      ") - imgui.CalcTextSize(spell.spellName));
+            imgui.Text("");
             if (config.settings.components.showSpellTools[1]) then
                 local toolsRemaining = tostring(funcs.ninjaToolsRemaining(spell.itemId));
                 imgui.SameLine();
-                imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(spell.spellName));
                 imgui.Text(" [" .. toolsRemaining .. "]");
+                imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                      ")); imgui.Text("") 
             end
 
-            imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                 ")); imgui.Text("") 
             if (config.settings.components.showRecastIchi[1]) then
                 local recastIchiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
-                imgui.SameLine();
-                imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     "));
-                imgui.Text(recastIchiTime);
+                imgui.SameLine(); imgui.Text(recastIchiTime);
+                imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("    ")); imgui.Text("");
             end
             if (config.settings.components.showRecastNi[1]) then
                 local recastNiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+1) / 60));;
-                imgui.SameLine();
-                imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     "));
-                imgui.Text(recastNiTime);
+                imgui.SameLine(); imgui.Text(recastNiTime);
+                imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("    ")); imgui.Text("");
             end
             if (config.settings.components.showRecastSan[1]) then
                 local recastSanTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+2) / 60));;
-                imgui.SameLine();
-                imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     "));
-                imgui.Text(recastSanTime);
+                imgui.SameLine(); imgui.Text(recastSanTime);
             end
         end
         
-        if(config.settings.components.showInoTools[1]) then
+        if(config.settings.components.showSpellTools[1] and config.settings.components.showInoTools[1]) then
             imgui.TextColored({1.0, 0.0, 0.0, 0.8}, "I"); imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("  "));
             imgui.TextColored({1.0, 0.4, 0.0, 0.8}, "n"); imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("   "));
             imgui.TextColored({1.0, 0.8, 0.0, 0.8}, "o"); imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("    "));
@@ -191,35 +189,31 @@ function renderNinjutsuWindow(config)
         imgui.Separator();
         for idx, spell in ipairs(consts.ninNonEleSpells) do
             if (config.settings.components.nonEleSpellList[idx][1]) then
-                imgui.Text(spell.spellName .. ":");
+                imgui.Text(spell.spellName .. ":  ");
                 
                 imgui.SameLine();
+                imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("      ") - imgui.CalcTextSize(spell.spellName));
+                imgui.Text("");
                 if (config.settings.components.showSpellTools[1]) then
                     local toolsRemaining = tostring(funcs.ninjaToolsRemaining(spell.itemId));
                     imgui.SameLine();
-                    --imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(spell.spellName));
-                    imgui.SetCursorPosX(imgui.CalcTextSize("          "))
                     imgui.Text(" [" .. toolsRemaining .. "]");
+                    imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                      ")); imgui.Text("") 
                 end
-
-                imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                 ")); imgui.Text("") 
+    
                 if (config.settings.components.showRecastIchi[1]) then
                     local recastIchiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
-                    imgui.SameLine();
-                    imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     "));
-                    imgui.Text(recastIchiTime);
+                    imgui.SameLine(); imgui.Text(recastIchiTime);
+                    imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("    ")); imgui.Text("");
                 end
                 if (config.settings.components.showRecastNi[1]) then
                     local recastNiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+1) / 60));;
-                    imgui.SameLine();
-                    imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     "));
-                    imgui.Text(recastNiTime);
+                    imgui.SameLine(); imgui.Text(recastNiTime);
+                    imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("    ")); imgui.Text("");
                 end
                 if (config.settings.components.showRecastSan[1]) then
                     local recastSanTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+2) / 60));;
-                    imgui.SameLine();
-                    imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     "));
-                    imgui.Text(recastSanTime);
+                    imgui.SameLine(); imgui.Text(recastSanTime);
                 end
             end
         end
@@ -256,6 +250,9 @@ function renderMenu(config, gdiObj)
                 imgui.Checkbox(' - Show tool count', config.settings.components.showSpellTools);
                 imgui.ShowHelp('Shows the tool count for elemental spells.');
                 
+                imgui.Checkbox(' -- Show inoshishinofuda tools', config.settings.components.showInoTools);
+                imgui.ShowHelp('Shows the number of remaining inoshishinofuda tools.');
+
                 imgui.Checkbox(' - Show recast times :Ichi', config.settings.components.showRecastIchi);
                 imgui.ShowHelp('Shows Ichi recast timers.');
     
@@ -293,9 +290,6 @@ function renderMenu(config, gdiObj)
                     imgui.EndCombo();
                 end
                 imgui.ShowHelp('Select which spell shows up at the top of the elemental wheel');
-
-                imgui.Checkbox('- Show inoshishinofuda tools', config.settings.components.showInoTools);
-                imgui.ShowHelp('Shows the number of remaining inoshishinofuda tools.');
   
                 imgui.Text(" ")
                 imgui.Text("Show the following ninja spells: ")
