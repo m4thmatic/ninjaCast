@@ -152,12 +152,12 @@ function renderNinjutsuWindow(config)
             if (config.settings.components.showRecastIchi[1]) then
                 local recastIchiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
                 imgui.SameLine(); imgui.Text(recastIchiTime);
-                imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("    ")); imgui.Text("");
+                imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(recastIchiTime)); imgui.Text("");
             end
             if (config.settings.components.showRecastNi[1]) then
                 local recastNiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+1) / 60));;
                 imgui.SameLine(); imgui.Text(recastNiTime);
-                imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("    ")); imgui.Text("");
+                imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(recastNiTime)); imgui.Text("");
             end
             if (config.settings.components.showRecastSan[1]) then
                 local recastSanTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+2) / 60));;
@@ -204,12 +204,12 @@ function renderNinjutsuWindow(config)
                 if (config.settings.components.showRecastIchi[1]) then
                     local recastIchiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
                     imgui.SameLine(); imgui.Text(recastIchiTime);
-                    imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("    ")); imgui.Text("");
+                    imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(recastIchiTime)); imgui.Text("");
                 end
                 if (config.settings.components.showRecastNi[1]) then
                     local recastNiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+1) / 60));;
                     imgui.SameLine(); imgui.Text(recastNiTime);
-                    imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("    ")); imgui.Text("");
+                    imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(recastNiTime)); imgui.Text("");
                 end
                 if (config.settings.components.showRecastSan[1]) then
                     local recastSanTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+2) / 60));;
