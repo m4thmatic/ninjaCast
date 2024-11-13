@@ -23,7 +23,7 @@
 addon.author   = 'Mathemagic';
 addon.name     = 'ninjaCast';
 addon.desc     = 'One click wheel casting / spell timers / tool counter / etc.';
-addon.version  = '1.0_prev1';
+addon.version  = '1.1';
 
 require ('common');
 local gui = require('gui');
@@ -63,6 +63,7 @@ local defaultConfig = T{
 	components = T{
         showSpellWindow  = T{true};
         showSpellTools   = T{true};
+        showToolNames    = T{false};
         showRecastIchi   = T{true};
         showRecastNi     = T{true};
         showRecastSan    = T{false};
@@ -101,7 +102,7 @@ local fontSettings = {
     visible = true,
     text = '',
 };
-local myFontObject;
+local shadowTextObj;
 
 local lastPositionX, lastPositionY;
 local dragActive = false;
@@ -109,10 +110,10 @@ local dragActive = false;
 
 --------------------------------------------------------------------
 local function HitTest(x, y)
-    local rect = myFontObject.rect;
+    local rect = shadowTextObj.rect;
     if (rect) then
-        local currentX = myFontObject.settings.position_x;
-        local currentY = myFontObject.settings.position_y;
+        local currentX = shadowTextObj.settings.position_x;
+        local currentY = shadowTextObj.settings.position_y;
         return (x >= (currentX - rect.right)) and (x <= (currentX + rect.right)) and (y >= (currentY - rect.bottom)) and ((y <= currentY + rect.bottom));
     else
         return false;
@@ -125,8 +126,8 @@ end
 
 --------------------------------------------------------------------
 ashita.events.register('load', 'load_cb', function()
-	myFontObject = gdi:create_object(fontSettings, false);
-    gui.setGDITextAttributes(config, myFontObject);
+	shadowTextObj = gdi:create_object(fontSettings, false);
+    gui.setGDITextAttributes(config, shadowTextObj);
     funcs.resetSpellIdx(config);
 end);
 
@@ -145,7 +146,7 @@ settings.register('settings', 'settings_update', function(s)
          -- Save the current settings..
         settings.save();
  
-        gui.setGDITextAttributes(config, myFontObject);
+        gui.setGDITextAttributes(config, shadowTextObj);
     end
 	
 end);
@@ -197,18 +198,18 @@ end);
 --------------------------------------------------------------------
 ashita.events.register('mouse', 'mouse_cb', function (e)
     if (dragActive) then
-        local currentX = myFontObject.settings.position_x;
-        local currentY = myFontObject.settings.position_y;
-        myFontObject:set_position_x(currentX + (e.x - lastPositionX));
-        myFontObject:set_position_y(currentY + (e.y - lastPositionY));
+        local currentX = shadowTextObj.settings.position_x;
+        local currentY = shadowTextObj.settings.position_y;
+        shadowTextObj:set_position_x(currentX + (e.x - lastPositionX));
+        shadowTextObj:set_position_y(currentY + (e.y - lastPositionY));
         lastPositionX = e.x;
         lastPositionY = e.y;
         if (e.message == 514) or (IsControlHeld() == false) then
             dragActive = false;
             e.blocked = true;
 			
-			config.settings.shadowText.position_x = myFontObject.settings.position_x;
-			config.settings.shadowText.position_y = myFontObject.settings.position_y;
+			config.settings.shadowText.position_x = shadowTextObj.settings.position_x;
+			config.settings.shadowText.position_y = shadowTextObj.settings.position_y;
 			settings.save();
             return;
         end
@@ -232,5 +233,5 @@ end);
 * desc : Event called when the Direct3D device is presenting a scene.
 --]]
 ashita.events.register('d3d_present', 'present_cb', function ()
-    gui.renderGUI(config, myFontObject);
+    gui.renderGUI(config, shadowTextObj);
 end);

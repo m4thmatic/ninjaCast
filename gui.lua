@@ -98,20 +98,30 @@ function renderNinjutsuWindow(config)
         --imgui.Text("Current   Tools       Recast");
         --imgui.Text("Spell     Remaining   Ichi   Ni");
 
-        imgui.Text("Current  ");
+        imgui.Text("Current   ");
         if (config.settings.components.showSpellTools[1]) then
             imgui.SameLine(); imgui.Text("Tools      ");
         end
         if (config.settings.components.showRecastIchi[1] or 
             config.settings.components.showRecastNi[1] or
             config.settings.components.showRecastSan[1]) then
-            imgui.SameLine(); imgui.Text("Recast");
+            if (config.settings.components.showToolNames[1]) then
+                    imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                                   "));
+                    imgui.Text("Recast");
+            else
+                imgui.SameLine(); imgui.Text("Recast");
+            end
         end
 
-        imgui.Text("Spell    ");
+        imgui.Text("Spell     ");
         if (config.settings.components.showSpellTools[1]) then
             imgui.SameLine(); imgui.Text("Remaining  ");
         end
+
+        if (config.settings.components.showToolNames[1]) then
+            imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                                  ")); imgui.Text("");
+        end
+        
         if (config.settings.components.showRecastIchi[1]) then
             imgui.SameLine(); imgui.Text("Ichi  ");
         end
@@ -130,38 +140,46 @@ function renderNinjutsuWindow(config)
             idx = 1 + (firstSpellIdx + i -1) % #(consts.eleSpellList)
             spell = consts.ninEleSpells[idx]
 
-            --If show current spell is selected, and displaying spell arrow
-            if (idx == funcs.getCurrentSpell()) and (config.settings.components.showWheelArrow[1]) then
-                imgui.TextColored({1.0, 0.95, 0.0, 0.8}, ">");
-            else
-                imgui.Text(" ");
-            end
-            imgui.SameLine();
-            imgui.TextColored(spell.color, spell.spellName .. ":");
-
-            imgui.SameLine();
-            imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("      ") - imgui.CalcTextSize(spell.spellName));
-            imgui.Text("");
-            if (config.settings.components.showSpellTools[1]) then
-                local toolsRemaining = tostring(funcs.ninjaToolsRemaining(spell.itemId));
+            if (config.settings.components.showEleSpellList[1]) then
+                --If show current spell is selected, and displaying spell arrow
+                if (idx == funcs.getCurrentSpell()) and (config.settings.components.showWheelArrow[1]) then
+                    imgui.TextColored({1.0, 0.95, 0.0, 0.8}, ">");
+                else
+                    imgui.Text(" ");
+                end
                 imgui.SameLine();
-                imgui.Text(" [" .. toolsRemaining .. "]");
-                imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                      ")); imgui.Text("") 
-            end
+                imgui.TextColored(spell.color, spell.spellName .. ":");
 
-            if (config.settings.components.showRecastIchi[1]) then
-                local recastIchiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
-                imgui.SameLine(); imgui.Text(recastIchiTime);
-                imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(recastIchiTime)); imgui.Text("");
-            end
-            if (config.settings.components.showRecastNi[1]) then
-                local recastNiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+1) / 60));;
-                imgui.SameLine(); imgui.Text(recastNiTime);
-                imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(recastNiTime)); imgui.Text("");
-            end
-            if (config.settings.components.showRecastSan[1]) then
-                local recastSanTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+2) / 60));;
-                imgui.SameLine(); imgui.Text(recastSanTime);
+                imgui.SameLine();
+                imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("      ") - imgui.CalcTextSize(spell.spellName));
+                imgui.Text("");
+                if (config.settings.components.showSpellTools[1]) then
+                    local toolsRemaining = tostring(funcs.ninjaToolsRemaining(spell.itemId));
+                    imgui.SameLine();
+                    imgui.Text(" [" .. toolsRemaining .. "]");
+                    if (config.settings.components.showToolNames[1]) then
+                        imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                  "));
+                        imgui.Text(" " .. spell.itemName .. "");
+                        imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                                  ")); imgui.Text("") 
+                    else
+                        imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                      ")); imgui.Text("") 
+                    end
+                end
+
+                if (config.settings.components.showRecastIchi[1]) then
+                    local recastIchiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId) / 60));
+                    imgui.SameLine(); imgui.Text(recastIchiTime);
+                    imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(recastIchiTime)); imgui.Text("");
+                end
+                if (config.settings.components.showRecastNi[1]) then
+                    local recastNiTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+1) / 60));;
+                    imgui.SameLine(); imgui.Text(recastNiTime);
+                    imgui.SameLine(); imgui.SetCursorPosX(imgui.GetCursorPosX() + imgui.CalcTextSize("     ") - imgui.CalcTextSize(recastNiTime)); imgui.Text("");
+                end
+                if (config.settings.components.showRecastSan[1]) then
+                    local recastSanTime = tostring(math.floor(AshitaCore:GetMemoryManager():GetRecast():GetSpellTimer(spell.spellId+2) / 60));;
+                    imgui.SameLine(); imgui.Text(recastSanTime);
+                end
             end
         end
         
@@ -198,7 +216,13 @@ function renderNinjutsuWindow(config)
                     local toolsRemaining = tostring(funcs.ninjaToolsRemaining(spell.itemId));
                     imgui.SameLine();
                     imgui.Text(" [" .. toolsRemaining .. "]");
-                    imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                      ")); imgui.Text("") 
+                    if (config.settings.components.showToolNames[1]) then
+                        imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                  "));
+                        imgui.Text(" " .. spell.itemName .. "");
+                        imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                                  ")); imgui.Text("") 
+                    else
+                        imgui.SameLine(); imgui.SetCursorPosX(imgui.CalcTextSize("                      ")); imgui.Text("") 
+                    end
                 end
     
                 if (config.settings.components.showRecastIchi[1]) then
@@ -249,6 +273,9 @@ function renderMenu(config, gdiObj)
 
                 imgui.Checkbox(' - Show tool count', config.settings.components.showSpellTools);
                 imgui.ShowHelp('Shows the tool count for elemental spells.');
+
+                imgui.Checkbox(' - Show tool name', config.settings.components.showToolNames);
+                imgui.ShowHelp('Shows the name of the tool for each spell.');                
                 
                 imgui.Checkbox(' -- Show inoshishinofuda tools', config.settings.components.showInoTools);
                 imgui.ShowHelp('Shows the number of remaining inoshishinofuda tools.');
