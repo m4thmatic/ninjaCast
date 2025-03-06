@@ -1,8 +1,14 @@
 local consts = require("constants")
+local chat = require('chat');
 
 local funcs = T{};
 
 local spellIdx = 1;
+
+local ninjaSpellCasting = {wasNinCasted = false, --did cast originate from this addon
+                           timeCasted = 0,       --time the spell was command to be cast
+                           isCasting = false,    --is spell now casting
+                          }
 
 --------------------------------------------------------------------
 funcs.getCurrentSpell = function()
@@ -32,6 +38,46 @@ funcs.castNextSpell = function(spellType, targetModifier)
 
     command = '/ma "' .. spellToCast .. '" ' .. targetModifier;
     AshitaCore:GetChatManager():QueueCommand(1, command);
+
+    ninjaSpellCasting.wasNinCasted = true;
+    ninjaSpellCasting.timeCasted = os.time();
+end
+
+--------------------------------------------------------------------
+funcs.handleActionPacket = function(actionType, abilityID)
+    
+    if (actionType == 8) then --spell casting/interrupted
+        funcs.handleCasting(abilityID)
+    elseif (actionType == 4) then --spell completion
+        if(funcs.isNinjutsu(abilityID) and ninjaSpellCasting.isCasting) then
+            funcs.nextSpell();
+        end
+        ninjaSpellCasting.wasNinCasted = false;
+        ninjaSpellCasting.isCasting = false;
+    end
+
+end
+
+--------------------------------------------------------------------
+funcs.handleCasting = function(abilityID)
+-- casting > actiontype = 8, abilityid = 24931
+-- interrupted > actiontype = 8, abilityid = 28787
+
+    if (abilityID == 28787) then --spell interrupted
+        isCasting = false;
+    elseif (abilityID == 24931) then --spell started casting
+        -- check to make sure that:
+        --  (1) spell cast appears to have originated from this addon, and
+        --  (2) the timing is close enough that this is likely true
+        if (ninjaSpellCasting.wasNinCasted == true) and (os.time() - ninjaSpellCasting.timeCasted <= 1) then
+            ninjaSpellCasting.isCasting = true
+        else
+            ninjaSpellCasting.isCasting = false;
+        end
+    end
+
+    ninjaSpellCasting.wasNinCasted = false;
+
 end
 
 --------------------------------------------------------------------
@@ -121,8 +167,8 @@ funcs.argbToHex = function(alpha, red, green, blue)
 end
 
 --- Gets the name of the top-most menu element. (credit to/copied from XITools)
+local menuBase = ashita.memory.find('FFXiMain.dll', 0, '8B480C85C974??8B510885D274??3B05', 16, 0);
 funcs.GetMenuName = function()
-    local menuBase = ashita.memory.find('FFXiMain.dll', 0, '8B480C85C974??8B510885D274??3B05', 16, 0);
     local subPointer = ashita.memory.read_uint32(menuBase);
     local subValue = ashita.memory.read_uint32(subPointer);
     if (subValue == 0) then

@@ -23,7 +23,7 @@
 addon.author   = 'Mathemagic';
 addon.name     = 'ninjaCast';
 addon.desc     = 'One click wheel casting / spell timers / tool counter / etc.';
-addon.version  = '1.1';
+addon.version  = '1.2';
 
 require ('common');
 local gui = require('gui');
@@ -31,7 +31,6 @@ local funcs = require("funcs");
 --local consts = require("constants");
 --local imgui = require('imgui');
 local settings = require('settings');
-local chat = require('chat');
 local gdi = require('gdifonts.include');
 local ffi = require('ffi');
 
@@ -69,6 +68,7 @@ local defaultConfig = T{
         showRecastSan    = T{false};
         showWheelArrow   = T{true};
         showSpellWhenNin = T{true};
+        hideWhenChatOpen = T{false};
         firstSpellIdx    = 1;
         showEleSpellList = T{true};
         nonEleSpellList  = T{{true},{false},{false},{false},{false},{false}};
@@ -106,7 +106,6 @@ local shadowTextObj;
 
 local lastPositionX, lastPositionY;
 local dragActive = false;
-
 
 --------------------------------------------------------------------
 local function HitTest(x, y)
@@ -168,7 +167,7 @@ ashita.events.register('command', 'command_cb', function (e)
     elseif (#args == 2 and args[2]:any('prev')) then
         funcs.prevSpell();
     else
-        --If not a ninjaCast command, don't block to allow normal "/nin spellname" casting
+        --If not a ninjaCast command, don't block so as to allow normal "/nin spellname" casting
         e.blocked = false;
         return;
     end
@@ -186,11 +185,17 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
     local abilityID = ashita.bits.unpack_be(e.data_raw, 10, 6, 16); --Action Packet [0C:6] (16 bits)
 
     if (userId == playerId) then
-        if (actionType == 4) then
-            if(funcs.isNinjutsu(abilityID)) then
-                funcs.nextSpell();
-            end
-        end
+        funcs.handleActionPacket(actionType, abilityID)
+
+--        if (actionType == 8) then --spell casting/interrupted
+--            funcs.handleCasting(abilityID)
+--        elseif (actionType == 4) then --spell completion
+--            if(funcs.isNinjutsu(abilityID)) then
+--                funcs.nextSpell();
+--            end
+--        end
+
+    --    print("action type: " .. tostring(actionType) .. " : ability ID: " .. tostring(abilityID))
     end    
 
 end);
